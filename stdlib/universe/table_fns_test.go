@@ -158,11 +158,6 @@ func TestTableFind_Call(t *testing.T) {
 			fn: `f = (key) => key.user == "user1"`,
 		},
 		{
-			name:    "no match",
-			wantErr: fmt.Errorf("no table found"),
-			fn:      `f = (key) => key.user == "no-user"`,
-		},
-		{
 			name:         "no execution context", // notifying the user of no-execution context
 			wantErr:      fmt.Errorf("do not have an execution context for tableFind, if using the repl, try executing this code on the server using the InfluxDB API"),
 			fn:           `f = (key) => key.user == "user1" and key._measurement == "CPU"`,
@@ -315,6 +310,68 @@ t = inj |> tableFind(fn: (key) => key.user == "user1")`
 		t.Errorf("expected different error -want/+got:\n%s\n", diff)
 	}
 }
+
+var nilTableFindBase = `
+import "csv"
+
+data = "
+#group,false,false,false,false,false,false,true
+#datatype,string,long,double,string,string,string,string
+#default,_result,,,,,,
+,result,table,_value,_field,_measurement,cpu,host
+,,0,1,usage_user,cpu,cpu-total,influx.local
+,,0,2,usage_user,cpu,cpu0,influx.local
+,,0,3,usage_user,cpu,cpu1,influx.local
+,,0,4,usage_user,cpu,cpu10,influx.local
+,,0,5,usage_user,cpu,cpu11,influx.local
+"
+
+base = csv.from( csv: data )
+
+// Intentionally fail the table find
+find = (key) => key.host == "influx.local-NOT-FOUND"
+`
+
+func TestNilTableFind_NilWithGetColumn(t *testing.T) {
+	script := nilTableFindBase + `
+		filtered_list =
+			base
+				|> limit(n: 3)
+				|> tableFind(fn: find)
+				|> getColumn(column: "cpu")
+
+		ok = length( arr: filtered_list ) == 0
+	`
+
+	s := evalOrFail(t, script)
+
+	for _, id := range []string{ "ok", } {
+		if !mustLookup(s, id).Bool() {
+			t.Errorf("%s was not OK indeed", id)
+		}
+	}
+}
+
+func TestNilTableFind_NilWithGetRecord(t *testing.T) {
+	script := nilTableFindBase + `
+		filtered_object =
+			base
+				|> tableFind(fn: find)
+				|> getRecord(idx: 0)
+
+		ok = not exists filtered_object.cpu
+	`
+
+	s := evalOrFail(t, script)
+
+	for _, id := range []string{ "ok", } {
+		if !mustLookup(s, id).Bool() {
+			t.Errorf("%s was not OK indeed", id)
+		}
+	}
+}
+
+
 
 // We have to write this test as a non-standard e2e test, because
 // our framework doesn't allow comparison between "simple" values, but only streams of tables.

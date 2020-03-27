@@ -4085,8 +4085,9 @@ r0 = t |> getRecord(idx: 0)
 
 ##### TableFind
 
-TableFind extracts the first table in a stream of table whose group key values match a given predicate. If no table
-is found, the function errors.
+TableFind extracts the first table in a stream of table whose group key values
+match a given predicate. If no table is found, the function returns the nil
+table.
 
 It has the following parameters:
 
@@ -4110,8 +4111,9 @@ t = from(bucket:"telegraf/autogen")
 
 ##### GetColumn
 
-GetColumn extracts a column from a table given its label. If the label is not present in the set of columns,
-the function errors.
+GetColumn extracts a column from a table, given a column label. If the label is
+not present in the set of columns, the function errors. If the input table is
+nil, the function returns an empty array.
 
 It has the following parameters:
 
@@ -4134,7 +4136,9 @@ x = vs[0] + vs[1]
 
 ##### GetRecord
 
-GetRecord extracts a record from a table given its index. If the index is out of bounds, the function errors.
+GetRecord extracts a record from a table given its index. If the index is out
+of bounds, the function errors. If the input table is nil, the function returns
+an empty object.
 
 It has the following parameters:
 

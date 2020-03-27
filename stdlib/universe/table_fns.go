@@ -124,9 +124,6 @@ func tableFindCall(ctx context.Context, args values.Object) (values.Value, error
 			return nil, err
 		}
 	}
-	if !found {
-		return nil, errors.New(codes.NotFound, "no table found")
-	}
 	return t, nil
 }
 
@@ -144,6 +141,8 @@ func getColumnCall(ctx context.Context, args values.Object) (values.Value, error
 		return nil, err
 	} else if v.Type() != objects.TableMonoType {
 		return nil, errors.Newf(codes.Invalid, "unexpected type for %s: want %v, got %v", getColumnTableArg, objects.TableMonoType, v.Type())
+	} else if v.(*objects.Table) == nil {
+		return emptyArray(), nil
 	} else {
 		tbl = v.(*objects.Table).Table()
 	}
@@ -165,6 +164,11 @@ func getColumnCall(ctx context.Context, args values.Object) (values.Value, error
 		return nil, err
 	}
 	return a, nil
+}
+
+func emptyArray() values.Array {
+	vsSlice := make([]values.Value, 0)
+	return values.NewArrayWithBacking(semantic.NewArrayType(semantic.BasicString), vsSlice)
 }
 
 func arrayFromColumn(idx int, cr flux.ColReader) values.Array {
@@ -229,6 +233,8 @@ func getRecordCall(ctx context.Context, args values.Object) (values.Value, error
 		return nil, err
 	} else if v.Type() != objects.TableMonoType {
 		return nil, errors.Newf(codes.Invalid, "unexpected type for %s: want %v, got %v", getRecordTableArg, objects.TableMonoType, v.Type())
+	} else if v.(*objects.Table) == nil {
+		return emptyObject(), nil
 	} else {
 		tbl = v.(*objects.Table).Table()
 	}
@@ -249,6 +255,11 @@ func getRecordCall(ctx context.Context, args values.Object) (values.Value, error
 		return nil, err
 	}
 	return r, nil
+}
+
+func emptyObject() values.Object {
+	vsMap := make(map[string]values.Value)
+	return values.NewObjectWithValues(vsMap)
 }
 
 func objectFromRow(idx int, cr flux.ColReader) values.Object {
